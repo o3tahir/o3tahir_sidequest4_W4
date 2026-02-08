@@ -1,4 +1,3 @@
-
 const TS = 32;
 
 // Raw JSON data (from levels.json).
@@ -20,10 +19,29 @@ function preload() {
 
 function setup() {
   /*
-  Convert raw JSON grids into Level objects.
-  levelsData.levels is an array of 2D arrays. 
+  Convert raw JSON into Level objects.
+  levelsData.levels is an array where each entry can be either:
+  - a plain 2D array (legacy format) OR
+  - an object with a `grid` property and optional metadata.
+  The loop below reads the level data and constructs Level objects.
   */
-  levels = levelsData.levels.map((grid) => new Level(copyGrid(grid), TS));
+  levels = levelsData.levels.map((levelEntry) => {
+    if (Array.isArray(levelEntry)) {
+      // legacy: levelEntry is the grid itself
+      return new Level(copyGrid(levelEntry), TS);
+    } else if (levelEntry && levelEntry.grid) {
+      return new Level(copyGrid(levelEntry.grid), TS);
+    } else {
+      // fallback guard
+      return new Level(
+        [
+          [1, 1],
+          [1, 1],
+        ],
+        TS,
+      );
+    }
+  });
 
   // Create a player.
   player = new Player(TS);
@@ -39,9 +57,31 @@ function setup() {
 function draw() {
   background(240);
 
+  // Update moving obstacles for the current level (they move continuously)
+  levels[li].updateObstacles();
+
   // Draw current level then player on top.
   levels[li].draw();
   player.draw();
+
+  // Collision logic (rectangle-rectangle): if player rect intersects any obstacle, restart level
+  // Compute player's AABB (we use a box around the avatar circle)
+  const px = player.pixelX();
+  const py = player.pixelY();
+  const pw = player.ts * 0.6; // same diameter used when drawing the player
+  const ph = pw;
+  const playerRect = {
+    left: px - pw / 2,
+    top: py - ph / 2,
+    right: px + pw / 2,
+    bottom: py + ph / 2,
+  };
+
+  if (levels[li].checkObstacleCollision(playerRect)) {
+    // restart current level: reset player pos and obstacle positions
+    loadLevel(li);
+    return; // skip HUD this frame so restart is immediate
+  }
 
   drawHUD();
 }
@@ -91,6 +131,8 @@ function loadLevel(idx) {
 
   // Ensure the canvas matches this level’s dimensions.
   resizeCanvas(level.pixelWidth(), level.pixelHeight());
+  // Reset obstacles to their initial positions whenever a level is loaded.
+  if (typeof level.resetObstacles === "function") level.resetObstacles();
 }
 
 function nextLevel() {
