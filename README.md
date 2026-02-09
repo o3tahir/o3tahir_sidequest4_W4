@@ -40,4 +40,6 @@ N/A
 
 ## GenAI
 
-The code was written by Dr. Karen Cochrane and David Han but they used GenAI to write the comments. Oma Tahir used GenAI to make and add changes to the provided code to add obstcles.
+The code was written by Dr. Karen Cochrane and David Han but they used GenAI to write the comments.
+
+Oma Tahir used GenAI to make and add changes to the provided code to add obstcles.
